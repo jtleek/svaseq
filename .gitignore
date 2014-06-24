@@ -1,0 +1,9 @@
+.Rhistory
+.DS_Store
+fpkm.rda
+GD667.QCstats.masterfile.txt
+pop_data_withuniqueid.txt
+simulateData_cache/
+zebrafish_cache/
+recount_cache/
+geuvadis_cache/
