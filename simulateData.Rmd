@@ -29,6 +29,7 @@ library(RColorBrewer)
 library(corrplot)
 library(limma)
 trop = RSkittleBrewer('tropical')
+set.seed(3532333)
 ```
 
 
@@ -74,8 +75,8 @@ dat0 = create_read_numbers(params$mu,params$fit,
                            params$p0,m=dim(counts)[1],n=dim(counts)[2],seed=53535)
 
 par(mfrow=c(1,2))
-plot(rowMeans(log(dat0+1)),rowVars(log(dat0+1)),pch=19,col=trop[2],main="simulated data",xlim=c(0,15))
-plot(rowMeans(log(counts+1)),rowVars(log(counts+1)),pch=19,col=trop[1],main="zebrafish data",xlim=c(0,15))
+plot(rowMeans(log(dat0+1)),rowVars(log(dat0+1)),pch=19,col=trop[2],main="simulated data",xlim=c(0,15),xlab="Mean(Count)", ylab="Var(Count)")
+plot(rowMeans(log(counts+1)),rowVars(log(counts+1)),pch=19,col=trop[1],main="zebrafish data",xlim=c(0,15),xlab="Mean(Count)", ylab="Var(Count)")
 
 ```
 
@@ -146,6 +147,7 @@ Here we compare unsupervised svaseq, supervised svaseq, ruv with control probes,
 group = rep(c(-1,1),each=10)
 batch = 1 - 2*rbinom(20,size=1,prob=0.5)
 gcoeffs = c(rnorm(400),rep(0,600))
+nullindex=401:1000
 bcoeffs = c(rep(0,100),rnorm(400,sd=1),rep(0,500))
 coeffs = cbind(bcoeffs,gcoeffs)
 controls = (bcoeffs != 0) & (gcoeffs==0)
@@ -237,7 +239,7 @@ corrplot(corr,method="ellipse",type="lower",col=cols(100),tl.pos="d")
 ```{r comparede, dependson="batchestimates",fig.align="center",fig.height=7,fig.width=7}
 dge <- DGEList(counts=dat0)
 dge <- calcNormFactors(dge)
-catplots = tstats = vector("list",8)
+catplots = tstats = pvals = vector("list",8)
 truevals = -abs(gcoeffs)
 names(truevals) = as.character(1:1000)
 adj = c("+ batch","+ batch_pca", "+ batch_sup_sva",
@@ -250,6 +252,7 @@ for(i in 1:8){
   fit <- lmFit(v,design)
   fit <- eBayes(fit)
   tstats[[i]] = abs(fit$t[,2])
+  pvals[[i]] = fit$p.value[,2]
   names(tstats[[i]]) = as.character(1:1000)
   catplots[[i]] = CATplot(-rank(tstats[[i]]),truevals,maxrank=400,make.plot=F)
 }
@@ -266,6 +269,16 @@ lines(catplots[[8]],col=trop[5],lwd=3)
 legend(200,0.5,legend=c("Known batch","PCA","Sup. svaseq", "Unsup. svaseq","RUV CP","RUV Res.", "RUV Emp.", "No adjustment"),col=trop[c(1,2,3,3,4,4,4,5)],lty=c(1,1,1,2,2,1,3),lwd=3)
 ```
 
+
+```{r pvals1, dependson="comparede",fig.align="center",fig.height=12,fig.width=7}
+nullindex = 401:1000
+par(mfrow=c(4,2))
+colvec = trop[c(1,2,3,3,4,4,4,5)]
+adjvec = c("Known batch","PCA","Sup. svaseq", "Unsup. svaseq","RUV CP","RUV Res.", "RUV Emp.", "No adjustment")
+for(i in 1:8){
+  hist(pvals[[i]][nullindex],main=adjvec[i],col=colvec[i])
+}
+```
 
 
 ## Generate a data set with correlated batch and group effects and compare methods.
@@ -370,7 +383,7 @@ corrplot(corr,method="ellipse",type="lower",col=cols(100),tl.pos="d")
 ```{r comparede2, dependson="batchestimates2",fig.align="center",fig.height=7,fig.width=7}
 dge <- DGEList(counts=dat0)
 dge <- calcNormFactors(dge)
-catplots = tstats = vector("list",8)
+catplots = tstats = pvals = vector("list",8)
 truevals = -abs(gcoeffs)
 names(truevals) = as.character(1:1000)
 adj = c("+ batch","+ batch_pca", "+ batch_sup_sva",
@@ -383,6 +396,7 @@ for(i in 1:8){
   fit <- lmFit(v,design)
   fit <- eBayes(fit)
   tstats[[i]] = abs(fit$t[,2])
+  pvals[[i]] = fit$p.value[,2]
   names(tstats[[i]]) = as.character(1:1000)
   catplots[[i]] = CATplot(-rank(tstats[[i]]),truevals,maxrank=400,make.plot=F)
 }
@@ -398,6 +412,20 @@ lines(catplots[[8]],col=trop[5],lwd=3)
 
 legend(200,0.5,legend=c("Known batch","PCA","Sup. svaseq", "Unsup. svaseq","RUV CP","RUV Res.", "RUV Emp.", "No adjustment"),col=trop[c(1,2,3,3,4,4,4,5)],lty=c(1,1,1,2,2,1,3),lwd=3)
 ```
+
+
+## Compare p-value histograms with different batch adjustments
+
+```{r pvals2, dependson="comparede2",fig.align="center",fig.height=12,fig.width=7}
+nullindex = 401:1000
+par(mfrow=c(4,2))
+colvec = trop[c(1,2,3,3,4,4,4,5)]
+adjvec = c("Known batch","PCA","Sup. svaseq", "Unsup. svaseq","RUV CP","RUV Res.", "RUV Emp.", "No adjustment")
+for(i in 1:8){
+  hist(pvals[[i]][nullindex],main=adjvec[i],col=colvec[i])
+}
+```
+
 
 
 ### Session Info
